@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
+	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
 
 var (
@@ -32,7 +33,7 @@ func (user *User) Get() *errors.RestError {
 	return nil
 }
 
-func (user User) Save() *errors.RestError {
+func (user *User) Save() *errors.RestError {
 	// Instead of creating function we are creating method here
 
 	current_user, is_exists := UserDB[user.ID]
@@ -44,6 +45,8 @@ func (user User) Save() *errors.RestError {
 		return errors.BadRequestError(fmt.Sprintf("User %d Already Exists!", user.ID))
 	}
 
-	UserDB[user.ID] = user
+	user.Created_Date = time_utils.GetLocalNowTimeString()
+
+	UserDB[user.ID] = *user
 	return nil
 }
