@@ -6,7 +6,10 @@ import (
 	"log"
 	"os"
 
-	_ "github.com/go-sql-driver/mysql" // import the package but we are not directly import in our code so a hyphen
+	"github.com/joho/godotenv"
+
+	// import the package but we are not directly import in our code so a hyphen
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -19,23 +22,30 @@ const (
 var (
 	Client *sql.DB
 
-	// get data from env varialbles
-	username    = os.Getenv(mysql_db_username)
-	password    = os.Getenv(mysql_db_password)
-	host        = os.Getenv(mysql_db_host)
-	schema_name = os.Getenv(mysql_schema_name)
+	// load .env file
+	err = godotenv.Load(".env")
+	// TODO: need to handle env file import error
+
+	// if err != nil {
+	// log.Fatalf("Error loading .env file")
+	// }
+
+	USERNAME    = os.Getenv(mysql_db_username)
+	PASSWORD    = os.Getenv(mysql_db_password)
+	HOST        = os.Getenv(mysql_db_host)
+	SCHEMA_NAME = os.Getenv(mysql_schema_name)
 )
 
 func init() {
 	// <username>/<password>@tcp<host>/<schema_name>?charset=utf8
-	fmt.Println("Connecting to Database.......")
+	log.Println("Connecting to Database.......")
+	// fmt.Println(USERNAME, PASSWORD, HOST, SCHEMA_NAME)
 
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
-		"root",
-		"s1302042",
-		"127.0.0.1:3306",
-		"users_db",
+		USERNAME, PASSWORD, HOST, SCHEMA_NAME,
 	)
+	log.Println(dataSourceName)
+
 	var err error
 	Client, err = sql.Open("mysql", dataSourceName)
 	if err != nil {

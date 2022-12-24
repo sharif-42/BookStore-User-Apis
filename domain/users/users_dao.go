@@ -3,19 +3,15 @@
 package users
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/sharif-42/BookStore-User-Apis/data_sources/mysql/users_db"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
+	"github.com/sharif-42/BookStore-User-Apis/utils/mysql_utils"
 	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
 
 const (
-	IndexUniqueEmail = "email_UNIQUE"
-	ErrorNoRpws      = "no rows in result set"
-	QueryInsertUser  = "INSERT INTO users(first_name, last_name, email, created_date) VALUES(?, ?, ?, ?);"
-	QueGetUser       = "SELECT id, first_name, last_name, email, created_date FROM users WHERE id=?;"
+	QueryInsertUser = "INSERT INTO users(first_name, last_name, email, created_date) VALUES(?, ?, ?, ?);"
+	QueGetUser      = "SELECT id, first_name, last_name, email, created_date FROM users WHERE id=?;"
 )
 
 func (user *User) Get() *errors.RestError {
@@ -28,12 +24,12 @@ func (user *User) Get() *errors.RestError {
 	defer stmt.Close()
 
 	result := stmt.QueryRow(user.ID)
-	if err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date); err != nil {
-		// return errors.NotFoundError(fmt.Sprintf("User %d Not Found!", user.ID))
-		if strings.Contains(err.Error(), ErrorNoRpws) {
-			return errors.NotFoundError(fmt.Sprintf("User %d Not Found!", user.ID))
-		}
-		return errors.InternalServerError(fmt.Sprintf("Error while trying to get user %d: %s", user.ID, err.Error()))
+	// results, err :=stmt.Query(user.ID) we can use this as well but then we have to close the connection by
+	// defer results.close() otherwise it will hold the database connection and we have run out of connections
+	// As we only need to get a single row not multiple rows here so QueryRow() is perfect in this case.
+
+	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date); getErr != nil {
+		return mysql_utils.ParseError(getErr)
 	}
 
 	return nil
@@ -50,22 +46,19 @@ func (user *User) Save() *errors.RestError {
 	// it will be executed just before the return statement of the function/method
 
 	user.Created_Date = time_utils.GetLocalNowTimeString()
-	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Created_Date)
-	if err != nil {
-		if strings.Contains(err.Error(), IndexUniqueEmail) {
-			return errors.BadRequestError(fmt.Sprintf("Email %s Already Registered!", user.Email))
-		}
-		return errors.InternalServerError(fmt.Sprintf("Error while Saving the User: %s", err.Error()))
-	}
-	userID, err := insertResult.LastInsertId()
-	if err != nil {
-		return errors.InternalServerError(fmt.Sprintf("Error while Saving the User: %s", err.Error()))
+	insertResult, SaveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Created_Date)
+	if SaveErr != nil {
+		return mysql_utils.ParseError(SaveErr)
 	}
 
+	userID, insertError := insertResult.LastInsertId()
+	if insertError != nil {
+		return mysql_utils.ParseError(insertError)
+	}
 	// we can execute the query directly like the following
 	// result, err = users_db.Client.Exec(QueryInsertUser, user.FirstName, user.LastName, user.Email, user.Created_Date)
 	// But most of the people said that statement approach is better than the direct execute for most of the cases. and performance is better as well
-	user.ID = userID
 
+	user.ID = userID
 	return nil
 }
