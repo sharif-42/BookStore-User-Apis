@@ -61,3 +61,16 @@ func UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestError
 	}
 	return current, nil
 }
+
+func DeleteUser(userId int64) *errors.RestError {
+	user := &users.User{ID: userId}
+
+	// checking is user really exists by given ID
+	_, getError := GetUser(userId)
+	if getError != nil {
+		return getError
+	}
+
+	// User exists and now we can perform delete
+	return user.Delete()
+}
