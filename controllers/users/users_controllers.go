@@ -13,7 +13,6 @@ import (
 
 func CreateUser(c *gin.Context) {
 	var user users.User
-	fmt.Println(user)
 
 	// bytes, err := ioutil.ReadAll(c.Request.Body)
 	// if err != nil {
@@ -28,8 +27,8 @@ func CreateUser(c *gin.Context) {
 	// }
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		rest_err := errors.BadRequestError("Invalid Json Body!")
-		c.JSON(rest_err.Status, rest_err)
+		restErr := errors.BadRequestError("Invalid Json Body!")
+		c.JSON(restErr.Status, restErr)
 		return
 	}
 	result, saveError := services.CreateUser(user)
@@ -37,8 +36,38 @@ func CreateUser(c *gin.Context) {
 		c.JSON(saveError.Status, saveError)
 		return
 	}
-	fmt.Println(result)
 	c.JSON(http.StatusCreated, result)
+}
+
+func UpdateUser(c *gin.Context) {
+	// Validating user id
+	userId, UserErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
+	if UserErr != nil {
+		err := errors.BadRequestError("Invalid User Id!")
+		c.JSON(err.Status, err)
+		return
+	}
+	var user users.User
+
+	// validating requested data
+	if err := c.ShouldBindJSON(&user); err != nil {
+		restErr := errors.BadRequestError("Invalid Json Body!")
+		c.JSON(restErr.Status, restErr)
+		return
+	}
+
+	// updating the user by given requested data
+	user.ID = userId
+
+	isPartial := c.Request.Method == http.MethodPatch
+
+	result, updateError := services.UpdateUser(user, isPartial)
+	if updateError != nil {
+		c.JSON(updateError.Status, updateError)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+
 }
 
 func GetUser(c *gin.Context) {
