@@ -28,8 +28,8 @@ type User struct {
 
 func (user *User) Validate() *errors.RestError {
 	// This is a method of user struct not an individual function
-	user.Email = strings.TrimSpace(strings.ToLower(user.FirstName))
-	user.Email = strings.TrimSpace(strings.ToLower(user.LastName))
+	user.FirstName = strings.TrimSpace(user.FirstName)
+	user.LastName = strings.TrimSpace(user.LastName)
 
 	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
 	if user.Email == "" {

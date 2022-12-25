@@ -11,6 +11,14 @@ import (
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
 )
 
+func getUserByID(userIdParam string) (int64, *errors.RestError) {
+	userId, UserErr := strconv.ParseInt(userIdParam, 10, 64)
+	if UserErr != nil {
+		return 0, errors.BadRequestError("User Id should be a number!")
+	}
+	return userId, nil
+}
+
 func CreateUser(c *gin.Context) {
 	var user users.User
 
@@ -41,10 +49,9 @@ func CreateUser(c *gin.Context) {
 
 func UpdateUser(c *gin.Context) {
 	// Validating user id
-	userId, UserErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
-	if UserErr != nil {
-		err := errors.BadRequestError("Invalid User Id!")
-		c.JSON(err.Status, err)
+	userId, idErr := getUserByID(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
 		return
 	}
 	var user users.User
@@ -71,10 +78,9 @@ func UpdateUser(c *gin.Context) {
 }
 
 func GetUser(c *gin.Context) {
-	userId, UserErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
-	if UserErr != nil {
-		err := errors.BadRequestError("Invalid User Id!")
-		c.JSON(err.Status, err)
+	userId, idErr := getUserByID(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
 		return
 	}
 	fmt.Println(userId)
@@ -88,4 +94,19 @@ func GetUser(c *gin.Context) {
 
 func SearchUser(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "User Search is not implemented yet!")
+}
+
+func DeleteUser(c *gin.Context) {
+	userId, idErr := getUserByID(c.Param("user_id"))
+	if idErr != nil {
+		c.JSON(idErr.Status, idErr)
+		return
+	}
+
+	if deleteError := services.DeleteUser(userId); deleteError != nil {
+		c.JSON(deleteError.Status, deleteError)
+		return
+	}
+
+	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
 }
