@@ -11,13 +11,14 @@ import (
 
 const (
 	QueryInsertUser = "INSERT INTO users(first_name, last_name, email, created_date) VALUES(?, ?, ?, ?);"
-	QueGetUser      = "SELECT id, first_name, last_name, email, created_date FROM users WHERE id=?;"
+	QueryGetUser    = "SELECT id, first_name, last_name, email, created_date FROM users WHERE id=?;"
+	QueryUpdateUser = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?"
 )
 
 func (user *User) Get() *errors.RestError {
 	// Instead of creating function we are creating method here
 
-	stmt, err := users_db.Client.Prepare(QueGetUser)
+	stmt, err := users_db.Client.Prepare(QueryGetUser)
 	if err != nil {
 		return errors.InternalServerError(err.Error())
 	}
@@ -60,5 +61,20 @@ func (user *User) Save() *errors.RestError {
 	// But most of the people said that statement approach is better than the direct execute for most of the cases. and performance is better as well
 
 	user.ID = userID
+	return nil
+}
+
+func (user *User) Update() *errors.RestError {
+	stmt, err := users_db.Client.Prepare(QueryUpdateUser)
+	if err != nil {
+		return errors.InternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.ID)
+
+	if updateErr != nil {
+		return mysql_utils.ParseError(updateErr)
+	}
 	return nil
 }
