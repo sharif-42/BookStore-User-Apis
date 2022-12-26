@@ -25,14 +25,7 @@ type User struct {
 	Password     string `json:"password"`
 }
 
-// func Validate(user *User) *errors.RestError {
-// 	// This is function, which is taking user as input and validating the user
-// 	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
-// 	if user.Email == "" {
-// 		return errors.BadRequestError("Invalid Email address!")
-// 	}
-// 	return nil
-// }
+type Users []User // for Users slice
 
 func (user *User) Validate() *errors.RestError {
 	// This is a method of user struct not an individual function
