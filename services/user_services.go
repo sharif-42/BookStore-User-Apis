@@ -1,8 +1,11 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/sharif-42/BookStore-User-Apis/domain/users"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
+	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
 
 func GetUser(userId int64) (*users.User, *errors.RestError) {
@@ -18,17 +21,17 @@ func GetUser(userId int64) (*users.User, *errors.RestError) {
 
 func CreateUser(user users.User) (*users.User, *errors.RestError) {
 	// validate the data before save in to database
-
+	fmt.Println(user)
 	if err := user.Validate(); err != nil {
-		// there is error while validating data
 		return nil, err
 	}
+
+	user.Created_Date = time_utils.GetNowDBFormat()
+	user.Status = users.StatusPending // For newly created user, status will be pending
 
 	if err := user.Save(); err != nil {
-		// there is error while creating user
 		return nil, err
 	}
-	// no error so return the user.
 	return &user, nil
 }
 
@@ -49,11 +52,15 @@ func UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestError
 		if user.Email != "" {
 			current.Email = user.Email
 		}
+		if user.Status != "" {
+			current.Status = user.Status
+		}
 
 	} else {
 		current.FirstName = user.FirstName
 		current.LastName = user.LastName
 		current.Email = user.Email
+		current.Status = user.Status
 	}
 
 	if err := current.Update(); err != nil {
@@ -73,4 +80,9 @@ func DeleteUser(userId int64) *errors.RestError {
 
 	// User exists and now we can perform delete
 	return user.Delete()
+}
+
+func SearchUser(status string) ([]users.User, *errors.RestError) {
+	userObj := &users.User{}
+	return userObj.FindByStatus(status)
 }

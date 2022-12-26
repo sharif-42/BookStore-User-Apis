@@ -3,17 +3,19 @@
 package users
 
 import (
+	"fmt"
+
 	"github.com/sharif-42/BookStore-User-Apis/data_sources/mysql/users_db"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
 	"github.com/sharif-42/BookStore-User-Apis/utils/mysql_utils"
-	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
 
 const (
-	QueryInsertUser = "INSERT INTO users(first_name, last_name, email, created_date) VALUES(?, ?, ?, ?);"
-	QueryGetUser    = "SELECT id, first_name, last_name, email, created_date FROM users WHERE id=?;"
-	QueryUpdateUser = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
-	QueryDeleteUser = "DELETE FROM users WHERE id=?;"
+	QueryInsertUser       = "INSERT INTO users(first_name, last_name, email, created_date, status, password) VALUES(?, ?, ?, ?, ?, ?);"
+	QueryGetUser          = "SELECT id, first_name, last_name, email, created_date, status FROM users WHERE id=?;"
+	QueryUpdateUser       = "UPDATE users SET first_name=?, last_name=?, email=?, status=? WHERE id=?;"
+	QueryDeleteUser       = "DELETE FROM users WHERE id=?;"
+	QueryFindUserByStatus = "SELECT id, first_name, last_name, email, created_date, status FROM users WHERE status=?;"
 )
 
 func (user *User) Get() *errors.RestError {
@@ -30,7 +32,7 @@ func (user *User) Get() *errors.RestError {
 	// defer results.close() otherwise it will hold the database connection and we have run out of connections
 	// As we only need to get a single row not multiple rows here so QueryRow() is perfect in this case.
 
-	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date); getErr != nil {
+	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date, &user.Status); getErr != nil {
 		return mysql_utils.ParseError(getErr)
 	}
 
@@ -47,8 +49,8 @@ func (user *User) Save() *errors.RestError {
 	defer stmt.Close() // After creating a statement we have to close it, otherwise it will hold the connection to database.
 	// it will be executed just before the return statement of the function/method
 
-	user.Created_Date = time_utils.GetLocalNowTimeString()
-	insertResult, SaveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Created_Date)
+	insertResult, SaveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Created_Date, user.Status, user.Password)
+	fmt.Println("#########ERRRRRRRRRR", SaveErr)
 	if SaveErr != nil {
 		return mysql_utils.ParseError(SaveErr)
 	}
@@ -72,7 +74,7 @@ func (user *User) Update() *errors.RestError {
 	}
 	defer stmt.Close()
 
-	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.ID)
+	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Status, user.ID)
 
 	if updateErr != nil {
 		return mysql_utils.ParseError(updateErr)
@@ -93,4 +95,33 @@ func (user *User) Delete() *errors.RestError {
 		return mysql_utils.ParseError(deleteError)
 	}
 	return nil
+}
+
+func (user *User) FindByStatus(status string) ([]User, *errors.RestError) {
+	stmt, err := users_db.Client.Prepare(QueryFindUserByStatus)
+	if err != nil {
+		return nil, errors.InternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(status)
+	if err != nil {
+		return nil, errors.InternalServerError(err.Error())
+	}
+	// defer will only be executed when it executes a return, So if we put defer before the error then it may raise nil pointer error
+	defer rows.Close() // as it returns rows and create an open connection, so we have to close this connection
+
+	results := make([]User, 0) // as we don't know how many users is ther with the given status. so making a sloce with 0.
+	// filling the slice
+	for rows.Next() {
+		var user User
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date, &user.Status); err != nil {
+			return nil, mysql_utils.ParseError(err)
+		}
+		results = append(results, user)
+	}
+	if len(results) == 0 {
+		return nil, errors.NotFoundError(fmt.Sprintf("No users matching status %s", status))
+	}
+	return results, nil
 }

@@ -1,6 +1,7 @@
 package mysql_utils
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -15,6 +16,7 @@ const (
 func ParseError(err error) *errors.RestError {
 	sqlErr, isSqlErr := err.(*mysql.MySQLError)
 	// we are checking the given error is a mysql error or not
+	fmt.Println(sqlErr, isSqlErr)
 	if !isSqlErr {
 		// that means this is not a mysql error
 		if strings.Contains(err.Error(), ErrorNoRows) {

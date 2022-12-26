@@ -1,7 +1,6 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -83,17 +82,12 @@ func GetUser(c *gin.Context) {
 		c.JSON(idErr.Status, idErr)
 		return
 	}
-	fmt.Println(userId)
 	result, getError := services.GetUser(userId)
 	if getError != nil {
 		c.JSON(getError.Status, getError)
 		return
 	}
 	c.JSON(http.StatusOK, result)
-}
-
-func SearchUser(c *gin.Context) {
-	c.String(http.StatusNotImplemented, "User Search is not implemented yet!")
 }
 
 func DeleteUser(c *gin.Context) {
@@ -109,4 +103,14 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func SearchUserByStatus(c *gin.Context) {
+	status := c.Query("status") // reading query param from the URL
+	users, searchErr := services.SearchUser(status)
+	if searchErr != nil {
+		c.JSON(searchErr.Status, searchErr)
+		return
+	}
+	c.JSON(http.StatusOK, users)
 }

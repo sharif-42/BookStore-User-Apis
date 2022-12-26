@@ -6,6 +6,7 @@ import (
 
 const (
 	apiDateLayout = "2006-01-02T15:04:05Z"
+	apiDBLayout   = "2006-01-02 15:04:05"
 )
 
 func getNowStandard() time.Time {
@@ -24,4 +25,8 @@ func GetLocalNowTimeString() string {
 func getNowStandardTimeString() string {
 	// for standard time
 	return getNowStandard().Format(apiDateLayout)
+}
+
+func GetNowDBFormat() string {
+	return getNowLocal().Format(apiDBLayout)
 }
