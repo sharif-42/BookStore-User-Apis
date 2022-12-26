@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/sharif-42/BookStore-User-Apis/domain/users"
+	"github.com/sharif-42/BookStore-User-Apis/utils/crypto_utils"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
 	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
@@ -28,7 +29,7 @@ func CreateUser(user users.User) (*users.User, *errors.RestError) {
 
 	user.Created_Date = time_utils.GetNowDBFormat()
 	user.Status = users.StatusPending // For newly created user, status will be pending
-
+	user.Password = crypto_utils.GetMd5(user.Password)
 	if err := user.Save(); err != nil {
 		return nil, err
 	}
@@ -82,7 +83,7 @@ func DeleteUser(userId int64) *errors.RestError {
 	return user.Delete()
 }
 
-func SearchUser(status string) ([]users.User, *errors.RestError) {
+func SearchUser(status string) (users.Users, *errors.RestError) {
 	userObj := &users.User{}
 	return userObj.FindByStatus(status)
 }

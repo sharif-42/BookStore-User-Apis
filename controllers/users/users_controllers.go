@@ -43,7 +43,7 @@ func CreateUser(c *gin.Context) {
 		c.JSON(saveError.Status, saveError)
 		return
 	}
-	c.JSON(http.StatusCreated, result)
+	c.JSON(http.StatusCreated, result.Marshall(c.GetHeader("X-Public") == "true"))
 }
 
 func UpdateUser(c *gin.Context) {
@@ -72,7 +72,7 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(updateError.Status, updateError)
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result.Marshall(c.GetHeader("X-Public") == "true"))
 
 }
 
@@ -87,7 +87,7 @@ func GetUser(c *gin.Context) {
 		c.JSON(getError.Status, getError)
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result.Marshall(c.GetHeader("X-Public") == "true"))
 }
 
 func DeleteUser(c *gin.Context) {
@@ -112,5 +112,7 @@ func SearchUserByStatus(c *gin.Context) {
 		c.JSON(searchErr.Status, searchErr)
 		return
 	}
-	c.JSON(http.StatusOK, users)
+	users.Marshall(c.GetHeader("X-Public") == "true")
+
+	c.JSON(http.StatusOK, users.Marshall(c.GetHeader("X-Public") == "true"))
 }
