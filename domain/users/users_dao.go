@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/sharif-42/BookStore-User-Apis/data_sources/mysql/users_db"
+	"github.com/sharif-42/BookStore-User-Apis/logger"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
-	"github.com/sharif-42/BookStore-User-Apis/utils/mysql_utils"
 )
 
 const (
@@ -21,9 +21,11 @@ const (
 func (user *User) Get() *errors.RestError {
 	// Instead of creating function we are creating method here
 
-	stmt, err := users_db.Client.Prepare(QueryGetUser)
-	if err != nil {
-		return errors.InternalServerError(err.Error())
+	stmt, stmtErr := users_db.Client.Prepare(QueryGetUser)
+	if stmtErr != nil {
+		error_message := "Error while trying to prepare get user statement"
+		logger.Error(error_message, stmtErr)
+		return errors.InternalServerError("Database Error!")
 	}
 	defer stmt.Close()
 
@@ -33,7 +35,9 @@ func (user *User) Get() *errors.RestError {
 	// As we only need to get a single row not multiple rows here so QueryRow() is perfect in this case.
 
 	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date, &user.Status); getErr != nil {
-		return mysql_utils.ParseError(getErr)
+		error_message := fmt.Sprintf("Error while trying to get user by ID=%d", user.ID)
+		logger.Error(error_message, getErr)
+		return errors.InternalServerError("Database Error!")
 	}
 
 	return nil
@@ -42,22 +46,24 @@ func (user *User) Get() *errors.RestError {
 func (user *User) Save() *errors.RestError {
 	// Instead of creating function we are creating method here
 
-	stmt, err := users_db.Client.Prepare(QueryInsertUser)
-	if err != nil {
-		return errors.InternalServerError(err.Error())
+	stmt, stmtErr := users_db.Client.Prepare(QueryInsertUser)
+	if stmtErr != nil {
+		logger.Error("Error while trying to prepare create user statement", stmtErr)
+		return errors.InternalServerError("Database Error!")
 	}
 	defer stmt.Close() // After creating a statement we have to close it, otherwise it will hold the connection to database.
 	// it will be executed just before the return statement of the function/method
 
 	insertResult, SaveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Created_Date, user.Status, user.Password)
-	fmt.Println("#########ERRRRRRRRRR", SaveErr)
 	if SaveErr != nil {
-		return mysql_utils.ParseError(SaveErr)
+		logger.Error("Error while trying to create user", SaveErr)
+		return errors.InternalServerError("Database Error!")
 	}
 
 	userID, insertError := insertResult.LastInsertId()
 	if insertError != nil {
-		return mysql_utils.ParseError(insertError)
+		logger.Error("Error while trying to get last insert id after creating a new user", insertError)
+		return errors.InternalServerError("Database Error!")
 	}
 	// we can execute the query directly like the following
 	// result, err = users_db.Client.Exec(QueryInsertUser, user.FirstName, user.LastName, user.Email, user.Created_Date)
@@ -68,45 +74,49 @@ func (user *User) Save() *errors.RestError {
 }
 
 func (user *User) Update() *errors.RestError {
-	stmt, err := users_db.Client.Prepare(QueryUpdateUser)
-	if err != nil {
-		return errors.InternalServerError(err.Error())
+	stmt, stmtErr := users_db.Client.Prepare(QueryUpdateUser)
+	if stmtErr != nil {
+		logger.Error("Error while trying to prepare update user statement", stmtErr)
+		return errors.InternalServerError("Database Error!")
 	}
 	defer stmt.Close()
 
 	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Status, user.ID)
-
 	if updateErr != nil {
-		return mysql_utils.ParseError(updateErr)
+		logger.Error("Error while trying to update user", updateErr)
+		return errors.InternalServerError("Database Error!")
 	}
 	return nil
 }
 
 func (user *User) Delete() *errors.RestError {
-	stmt, err := users_db.Client.Prepare(QueryDeleteUser)
-	if err != nil {
-		return errors.InternalServerError(err.Error())
+	stmt, stmtErr := users_db.Client.Prepare(QueryDeleteUser)
+	if stmtErr != nil {
+		logger.Error("Error while trying to prepare delete user statement", stmtErr)
+		return errors.InternalServerError("Database Error!")
 	}
 	defer stmt.Close()
 
 	_, deleteError := stmt.Exec(user.ID)
-
 	if deleteError != nil {
-		return mysql_utils.ParseError(deleteError)
+		logger.Error("Error while trying to delete user", deleteError)
+		return errors.InternalServerError("Database Error!")
 	}
 	return nil
 }
 
 func (user *User) FindByStatus(status string) (Users, *errors.RestError) {
-	stmt, err := users_db.Client.Prepare(QueryFindUserByStatus)
-	if err != nil {
-		return nil, errors.InternalServerError(err.Error())
+	stmt, stmtErr := users_db.Client.Prepare(QueryFindUserByStatus)
+	if stmtErr != nil {
+		logger.Error("Error while trying to prepare find user by status statement", stmtErr)
+		return nil, errors.InternalServerError("Database Error!")
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(status)
-	if err != nil {
-		return nil, errors.InternalServerError(err.Error())
+	rows, findErr := stmt.Query(status)
+	if findErr != nil {
+		logger.Error("Error while trying to delete user", findErr)
+		return nil, errors.InternalServerError("Database Error!")
 	}
 	// defer will only be executed when it executes a return, So if we put defer before the error then it may raise nil pointer error
 	defer rows.Close() // as it returns rows and create an open connection, so we have to close this connection
@@ -116,7 +126,8 @@ func (user *User) FindByStatus(status string) (Users, *errors.RestError) {
 	for rows.Next() {
 		var user User
 		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Created_Date, &user.Status); err != nil {
-			return nil, mysql_utils.ParseError(err)
+			logger.Error("Error while scan user row into user struct", err)
+			return nil, errors.InternalServerError("Database Error!")
 		}
 		results = append(results, user)
 	}

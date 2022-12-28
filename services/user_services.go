@@ -1,15 +1,32 @@
 package services
 
 import (
-	"fmt"
-
 	"github.com/sharif-42/BookStore-User-Apis/domain/users"
 	"github.com/sharif-42/BookStore-User-Apis/utils/crypto_utils"
 	"github.com/sharif-42/BookStore-User-Apis/utils/errors"
 	"github.com/sharif-42/BookStore-User-Apis/utils/time_utils"
 )
 
-func GetUser(userId int64) (*users.User, *errors.RestError) {
+var (
+	UsersService usersServiceInterface = &usersService{}
+	// creating a variable of UsersService of type usersServiceInterface and creating new instance of usersService
+)
+
+type usersService struct {
+	// an emty struct for user service. so that all methods belong to this service
+}
+
+type usersServiceInterface interface {
+	// this interface will help us in many ways like followings
+	// 1. We can mock, while we run the tests, otherwise mock will not possible
+	GetUser(int64) (*users.User, *errors.RestError)
+	CreateUser(users.User) (*users.User, *errors.RestError)
+	UpdateUser(users.User, bool) (*users.User, *errors.RestError)
+	DeleteUser(int64) *errors.RestError
+	SearchUser(string) (users.Users, *errors.RestError)
+}
+
+func (usersService *usersService) GetUser(userId int64) (*users.User, *errors.RestError) {
 	if userId <= 0 {
 		return nil, errors.BadRequestError("Invalid User Id!")
 	}
@@ -20,9 +37,8 @@ func GetUser(userId int64) (*users.User, *errors.RestError) {
 	return result, nil
 }
 
-func CreateUser(user users.User) (*users.User, *errors.RestError) {
+func (usersService *usersService) CreateUser(user users.User) (*users.User, *errors.RestError) {
 	// validate the data before save in to database
-	fmt.Println(user)
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
@@ -36,9 +52,9 @@ func CreateUser(user users.User) (*users.User, *errors.RestError) {
 	return &user, nil
 }
 
-func UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestError) {
+func (usersService *usersService) UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestError) {
 	// update the user and return updated user or error if there is any
-	current, err := GetUser(user.ID)
+	current, err := usersService.GetUser(user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +86,11 @@ func UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestError
 	return current, nil
 }
 
-func DeleteUser(userId int64) *errors.RestError {
+func (usersService *usersService) DeleteUser(userId int64) *errors.RestError {
 	user := &users.User{ID: userId}
 
 	// checking is user really exists by given ID
-	_, getError := GetUser(userId)
+	_, getError := usersService.GetUser(userId)
 	if getError != nil {
 		return getError
 	}
@@ -83,7 +99,7 @@ func DeleteUser(userId int64) *errors.RestError {
 	return user.Delete()
 }
 
-func SearchUser(status string) (users.Users, *errors.RestError) {
+func (usersService *usersService) SearchUser(status string) (users.Users, *errors.RestError) {
 	userObj := &users.User{}
 	return userObj.FindByStatus(status)
 }
